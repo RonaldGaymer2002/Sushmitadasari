@@ -4,7 +4,7 @@ from PIL import Image, ImageEnhance
 IMAGE_PATH = "85209734.jpg"
 SVG_PATH = "dark.svg"
 
-WIDTH = 84
+WIDTH = 76
 ROWS = 58
 
 ASCII_CHARS = ["@", "%", "#", "*", "+", "=", "-", ":", "."]
@@ -15,16 +15,19 @@ except Exception as e:
     print(f"Error cargando imagen: {e}")
     sys.exit(1)
 
-# Contraste para resaltar contornos
+# Contraste pronunciado para marcar bien tus rasgos
 enhancer = ImageEnhance.Contrast(img)
-img = enhancer.enhance(1.4)
+img = enhancer.enhance(1.45)
 
-# Recorte simétrico en cabeza y torso
+# --- RECORTE INTELIGENTE: Eliminamos el fondo blanco de los lados para hacer zoom ---
 w, h = img.size
-crop_top = int(h * 0.04)
-crop_bottom = int(h * 0.88)
-img = img.crop((0, crop_top, w, crop_bottom))
+crop_left = int(w * 0.15)      # Cortamos 15% de espacio vacío a la izquierda
+crop_right = int(w * 0.85)     # Cortamos 15% de espacio vacío a la derecha
+crop_top = int(h * 0.03)       # Empezamos justo arriba del pelo
+crop_bottom = int(h * 0.82)    # Bajamos hasta el pecho/hombros
+img = img.crop((crop_left, crop_top, crop_right, crop_bottom))
 
+# Redimensionamos al lienzo completo
 img = img.resize((WIDTH, ROWS))
 
 pixels = list(img.getdata())
@@ -36,7 +39,7 @@ for i in range(0, len(pixels), WIDTH):
 
 lines = lines[:ROWS]
 
-# Centro matemático exacto del cuadro VISUAL.MAP (x=257) con text-anchor="middle"
+# Centro exacto del recuadro VISUAL.MAP (x=257) con centrado nativo
 CENTER_X = 257
 y_start = 55.00
 y_step = 7.30
@@ -66,6 +69,6 @@ if start_pos != -1:
     )
     with open(SVG_PATH, "w", encoding="utf-8") as f:
         f.write(new_svg)
-    print("¡dark.svg centrado con exito!")
+    print("¡dark.svg actualizado con zoom y proporciones anchas!")
 else:
-    print("No se encontro el marcador del bloque ASCII.")
+    print("No se encontró el marcador del bloque ASCII.")

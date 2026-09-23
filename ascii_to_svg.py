@@ -4,8 +4,7 @@ from PIL import Image, ImageEnhance
 IMAGE_PATH = "85209734.jpg"
 SVG_PATH = "dark.svg"
 
-# Dimensiones exactas de la rejilla para cubrir el recuadro VISUAL.MAP
-COLS = 82
+WIDTH = 60
 ROWS = 58
 
 ASCII_CHARS = ["@", "%", "#", "*", "+", "=", "-", ":", "."]
@@ -16,35 +15,36 @@ except Exception as e:
     print(f"Error cargando imagen: {e}")
     sys.exit(1)
 
-# Realce de contraste
+# Contraste para resaltar contornos
 enhancer = ImageEnhance.Contrast(img)
-img = enhancer.enhance(1.45)
+img = enhancer.enhance(1.4)
 
-# --- RECORTE INTELIGENTE (ZOOM) PARA LLENAR EL ANCHO ---
-# Recortamos margen sobrante de arriba/abajo para que el torso y cabeza se ensanchen al 100%
+# Recorte simétrico en cabeza y torso
 w, h = img.size
-crop_top = int(h * 0.05)       # Cortar un poco de aire superior
-crop_bottom = int(h * 0.85)    # Tomar torso superior y hombros completos
+crop_top = int(h * 0.04)
+crop_bottom = int(h * 0.88)
 img = img.crop((0, crop_top, w, crop_bottom))
 
-# Redimensionar directamente a la matriz completa del visor
-img = img.resize((COLS, ROWS))
+img = img.resize((WIDTH, ROWS))
 
 pixels = list(img.getdata())
 lines = []
-for i in range(0, len(pixels), COLS):
-    row = pixels[i : i + COLS]
+for i in range(0, len(pixels), WIDTH):
+    row = pixels[i : i + WIDTH]
     line = "".join([ASCII_CHARS[int(p / 256 * len(ASCII_CHARS))] for p in row])
     lines.append(line)
 
-# Posicionamiento: arranca en x="24" para cubrir de izquierda a derecha
-y_start = 54.00
+lines = lines[:ROWS]
+
+# Centro matemático exacto del cuadro VISUAL.MAP (x=257) con text-anchor="middle"
+CENTER_X = 257
+y_start = 55.00
 y_step = 7.30
 tspans = []
 for idx, line in enumerate(lines):
     curr_y = f"{y_start + idx * y_step:.2f}"
     safe_line = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    tspans.append(f'<tspan x="24" y="{curr_y}" xml:space="preserve">{safe_line}</tspan>')
+    tspans.append(f'<tspan x="{CENTER_X}" y="{curr_y}" text-anchor="middle" xml:space="preserve">{safe_line}</tspan>')
 
 ascii_block = "\n".join(tspans)
 
@@ -66,6 +66,6 @@ if start_pos != -1:
     )
     with open(SVG_PATH, "w", encoding="utf-8") as f:
         f.write(new_svg)
-    print("¡dark.svg actualizado con zoom y ancho completo!")
+    print("¡dark.svg centrado con exito!")
 else:
-    print("No se encontró el marcador del bloque ASCII.")
+    print("No se encontro el marcador del bloque ASCII.")

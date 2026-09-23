@@ -4,8 +4,9 @@ from PIL import Image, ImageEnhance
 IMAGE_PATH = "85209734.jpg"
 SVG_PATH = "dark.svg"
 
-# Ancho extendido para cubrir los 488px del marco VISUAL.MAP
-WIDTH = 84  
+# Dimensiones exactas de la rejilla para cubrir el recuadro VISUAL.MAP
+COLS = 82
+ROWS = 58
 
 ASCII_CHARS = ["@", "%", "#", "*", "+", "=", "-", ":", "."]
 
@@ -15,29 +16,28 @@ except Exception as e:
     print(f"Error cargando imagen: {e}")
     sys.exit(1)
 
-# Realce de contraste para rasgos definidos
+# Realce de contraste
 enhancer = ImageEnhance.Contrast(img)
 img = enhancer.enhance(1.45)
 
-# Calculamos altura proporcional
+# --- RECORTE INTELIGENTE (ZOOM) PARA LLENAR EL ANCHO ---
+# Recortamos margen sobrante de arriba/abajo para que el torso y cabeza se ensanchen al 100%
 w, h = img.size
-aspect_ratio = h / w
-new_height = int(WIDTH * aspect_ratio * 0.55)
-# Aseguramos cubrir las 58 filas verticales
-new_height = max(58, new_height)
-img = img.resize((WIDTH, new_height))
+crop_top = int(h * 0.05)       # Cortar un poco de aire superior
+crop_bottom = int(h * 0.85)    # Tomar torso superior y hombros completos
+img = img.crop((0, crop_top, w, crop_bottom))
+
+# Redimensionar directamente a la matriz completa del visor
+img = img.resize((COLS, ROWS))
 
 pixels = list(img.getdata())
 lines = []
-for i in range(0, len(pixels), WIDTH):
-    row = pixels[i : i + WIDTH]
+for i in range(0, len(pixels), COLS):
+    row = pixels[i : i + COLS]
     line = "".join([ASCII_CHARS[int(p / 256 * len(ASCII_CHARS))] for p in row])
     lines.append(line)
 
-# Tomamos exactamente las 58 líneas visibles
-lines = lines[:58]
-
-# Posicionamiento: arrancamos pegados al margen izquierdo (x="24")
+# Posicionamiento: arranca en x="24" para cubrir de izquierda a derecha
 y_start = 54.00
 y_step = 7.30
 tspans = []
@@ -48,7 +48,6 @@ for idx, line in enumerate(lines):
 
 ascii_block = "\n".join(tspans)
 
-# Inyectar dentro de dark.svg
 with open(SVG_PATH, "r", encoding="utf-8") as f:
     svg_content = f.read()
 
@@ -67,6 +66,6 @@ if start_pos != -1:
     )
     with open(SVG_PATH, "w", encoding="utf-8") as f:
         f.write(new_svg)
-    print("¡dark.svg actualizado a pantalla completa en ancho y alto!")
+    print("¡dark.svg actualizado con zoom y ancho completo!")
 else:
     print("No se encontró el marcador del bloque ASCII.")

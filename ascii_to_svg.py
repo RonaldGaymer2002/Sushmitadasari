@@ -4,7 +4,7 @@ from PIL import Image, ImageEnhance
 IMAGE_PATH = "85209734.jpg"
 SVG_PATH = "dark.svg"
 
-WIDTH = 60
+WIDTH = 84
 ROWS = 58
 
 ASCII_CHARS = ["@", "%", "#", "*", "+", "=", "-", ":", "."]

@@ -1,52 +1,70 @@
-from pathlib import Path
-from html import escape
+import sys
+from PIL import Image, ImageEnhance
 
-INPUT = "portrait.txt"
-OUTPUT = "portrait_tspan.txt"
+IMAGE_PATH = "85209734.jpg"
+SVG_PATH = "dark.svg"
+WIDTH = 54  # Ancho ideal para el contenedor del scanner
 
-# SVG placement
-START_X = -10
-START_Y = -30
-LINE_HEIGHT = 9
+# Rango de caracteres de más denso a más claro
+ASCII_CHARS = ["@", "%", "#", "*", "+", "=", "-", ":", "."]
 
-# Optional trimming
-TRIM_LEFT = 0
-TRIM_RIGHT = 0
+try:
+    img = Image.open(IMAGE_PATH).convert("L")
+except Exception as e:
+    print(f"Error cargando imagen: {e}")
+    sys.exit(1)
 
-# Keep every portrait line
-REMOVE_EMPTY = False
+# Ajuste de contraste para resaltar rasgos
+enhancer = ImageEnhance.Contrast(img)
+img = enhancer.enhance(1.4)
 
-lines = Path(INPUT).read_text(
-    encoding="utf-8",
-    errors="ignore"
-).splitlines()
+# Calcular altura proporcional a la fuente de terminal
+w, h = img.size
+aspect_ratio = h / w
+new_height = int(WIDTH * aspect_ratio * 0.55)
+img = img.resize((WIDTH, new_height))
 
-# remove trailing spaces only
-lines = [l.rstrip() for l in lines]
+pixels = img.getdata()
+lines = []
+for i in range(0, len(pixels), WIDTH):
+    row = pixels[i:i + WIDTH]
+    line = "".join([ASCII_CHARS[int(p / 256 * len(ASCII_CHARS))] for p in row])
+    lines.append(line)
 
-if REMOVE_EMPTY:
-    lines = [l for l in lines if l.strip()]
+# Limitar al alto visible de la ventana SVG
+lines = lines[:53]
 
-# trim columns if desired
-processed = []
-for line in lines:
-    if TRIM_RIGHT > 0:
-        line = line[:-TRIM_RIGHT]
-    if TRIM_LEFT > 0:
-        line = line[TRIM_LEFT:]
-    processed.append(line)
+# Generar tspans con espaciado exacto
+y_start = 79.98
+y_step = 7.55
+tspans = []
+for idx, line in enumerate(lines):
+    curr_y = f"{y_start + idx * y_step:.2f}"
+    # Escapar caracteres HTML/XML
+    safe_line = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    tspans.append(f'<tspan x="30" y="{curr_y}" xml:space="preserve">{safe_line}</tspan>')
 
-y = START_Y
-svg = []
-for line in processed:
-    svg.append(
-        f'<tspan x="{START_X}" y="{y}">{escape(line)}</tspan>'
+ascii_block = "\n".join(tspans)
+
+# Reemplazar bloque ASCII en dark.svg
+with open(SVG_PATH, "r", encoding="utf-8") as f:
+    svg_content = f.read()
+
+start_marker = '<text x="30" y="0" class="ascii">'
+end_marker = '</text>'
+
+start_pos = svg_content.find(start_marker)
+if start_pos != -1:
+    end_pos = svg_content.find(end_marker, start_pos)
+    new_svg = (
+        svg_content[:start_pos + len(start_marker)]
+        + "\n"
+        + ascii_block
+        + "\n"
+        + svg_content[end_pos:]
     )
-    y += LINE_HEIGHT
-
-Path(OUTPUT).write_text(
-    "\n".join(svg),
-    encoding="utf-8"
-)
-
-print(f"Generated {len(svg)} tspans.")
+    with open(SVG_PATH, "w", encoding="utf-8") as f:
+        f.write(new_svg)
+    print("¡dark.svg actualizado exitosamente con tu rostro!")
+else:
+    print("No se encontró el marcador del bloque ASCII.")

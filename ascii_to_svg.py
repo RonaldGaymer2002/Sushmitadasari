@@ -4,10 +4,9 @@ from PIL import Image, ImageEnhance
 IMAGE_PATH = "85209734.jpg"
 SVG_PATH = "dark.svg"
 
-# Aumentamos el ancho para que abarque todo el ancho del VISUAL.MAP
-WIDTH = 64  
+# Ancho extendido para cubrir los 488px del marco VISUAL.MAP
+WIDTH = 84  
 
-# Caracteres de densidad tonal refinada
 ASCII_CHARS = ["@", "%", "#", "*", "+", "=", "-", ":", "."]
 
 try:
@@ -20,11 +19,11 @@ except Exception as e:
 enhancer = ImageEnhance.Contrast(img)
 img = enhancer.enhance(1.45)
 
-# Calculamos altura para llenar verticalmente el cuadro (hasta 58 líneas)
+# Calculamos altura proporcional
 w, h = img.size
 aspect_ratio = h / w
 new_height = int(WIDTH * aspect_ratio * 0.55)
-# Aseguramos un mínimo de 58 filas para abarcar hasta abajo
+# Aseguramos cubrir las 58 filas verticales
 new_height = max(58, new_height)
 img = img.resize((WIDTH, new_height))
 
@@ -35,21 +34,21 @@ for i in range(0, len(pixels), WIDTH):
     line = "".join([ASCII_CHARS[int(p / 256 * len(ASCII_CHARS))] for p in row])
     lines.append(line)
 
-# Tomamos 58 líneas para ocupar todo el alto del contenedor
+# Tomamos exactamente las 58 líneas visibles
 lines = lines[:58]
 
-# Posicionamiento exacto dentro del recuadro
-y_start = 56.00
+# Posicionamiento: arrancamos pegados al margen izquierdo (x="24")
+y_start = 54.00
 y_step = 7.30
 tspans = []
 for idx, line in enumerate(lines):
     curr_y = f"{y_start + idx * y_step:.2f}"
     safe_line = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    tspans.append(f'<tspan x="22" y="{curr_y}" xml:space="preserve">{safe_line}</tspan>')
+    tspans.append(f'<tspan x="24" y="{curr_y}" xml:space="preserve">{safe_line}</tspan>')
 
 ascii_block = "\n".join(tspans)
 
-# Reemplazar bloque ASCII en dark.svg
+# Inyectar dentro de dark.svg
 with open(SVG_PATH, "r", encoding="utf-8") as f:
     svg_content = f.read()
 
@@ -68,6 +67,6 @@ if start_pos != -1:
     )
     with open(SVG_PATH, "w", encoding="utf-8") as f:
         f.write(new_svg)
-    print("¡dark.svg ampliado exitosamente a pantalla completa!")
+    print("¡dark.svg actualizado a pantalla completa en ancho y alto!")
 else:
     print("No se encontró el marcador del bloque ASCII.")
